@@ -1,0 +1,17 @@
+{
+  "name": "Βαθμολόγιο — Σχεδιασμός & Τεχνολογία",
+  "short_name": "Βαθμολόγιο",
+  "description": "Παρουσιολόγιο, εργασίες και βαθμοί για τα τμήματα Σχεδιασμού & Τεχνολογίας.",
+  "start_url": "./vathmologio.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#FAF7F0",
+  "theme_color": "#1B3B57",
+  "lang": "el",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

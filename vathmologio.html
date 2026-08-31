@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Βαθμολόγιο — Σχεδιασμός &amp; Τεχνολογία</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#1B3B57">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Βαθμολόγιο">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --paper:#EAF2EE;
+    --paper2:#DCEBE3;
+    --ink:#1E2A3A;
+    --ink-soft:#5B6672;
+    --line:#C6DED2;
+    --blue:#3D6E8F;
+    --blue-dark:#294A63;
+    --amber:#C97F32;
+    --red:#A8493F;
+    --green:#4C7A5E;
+    --card:#FFFFFF;
+    --radius:3px;
+    --absent-bg:#F6D3CC; --absent-ink:#7A2E24;
+    --nobook-bg:#F6E3BE; --nobook-ink:#7A5219;
+    --disruptive-bg:#EAD1DA; --disruptive-ink:#6B2E42;
+    --participation-bg:#D3E9DC; --participation-ink:#2F5C42;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background-color:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    padding-bottom:84px;
+    min-height:100vh;
+  }
+  h1,h2,h3{
+    font-family:'Space Grotesk', sans-serif;
+    margin:0 0 4px 0;
+    letter-spacing:-0.01em;
+  }
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  header.top{
+    padding:18px 16px 12px 16px;
+    border-bottom:1px solid var(--line);
+    background:rgba(250,247,240,0.9);
+    position:sticky; top:0; z-index:5;
+    backdrop-filter: blur(2px);
+  }
+  header.top .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--blue);
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+  }
+  header.top h1{font-size:20px; color:var(--blue-dark);}
+  #teacherNameInput, #schoolNameInput{
+    margin-top:6px; border:none; border-bottom:1px dashed var(--line);
+    background:transparent; padding:3px 0; font-size:13px; color:var(--ink-soft);
+    font-family:'IBM Plex Sans', sans-serif; width:100%;
+  }
+  #teacherNameInput:focus, #schoolNameInput:focus{outline:none; border-bottom-color:var(--blue);}
+  main{padding:14px 14px 20px 14px; max-width:640px; margin:0 auto;}
+  section.block{margin-bottom:22px;}
+  .rule{
+    border:none; border-top:1px dashed var(--line); margin:10px 0 14px 0;
+  }
+  .field-label{
+    font-size:11px; text-transform:uppercase; letter-spacing:0.06em;
+    color:var(--ink-soft); margin-bottom:5px; display:block;
+  }
+  select, input[type=text], input[type=date], input[type=number], textarea{
+    width:100%; font-family:'IBM Plex Sans', sans-serif; font-size:15px;
+    padding:9px 10px; border:1px solid var(--line); border-radius:var(--radius);
+    background:var(--card); color:var(--ink);
+  }
+  textarea{resize:vertical; min-height:56px;}
+  input:focus, select:focus, textarea:focus, button:focus{
+    outline:2px solid var(--blue); outline-offset:1px;
+  }
+  .row{margin-bottom:12px;}
+  .two-col{display:flex; gap:10px;}
+  .two-col > div{flex:1;}
+  button{
+    font-family:'IBM Plex Sans', sans-serif; font-weight:600; font-size:14px;
+    border-radius:var(--radius); border:1px solid var(--blue); cursor:pointer;
+    padding:9px 14px; background:var(--blue); color:#fff;
+  }
+  button.secondary{background:transparent; color:var(--blue-dark); border-color:var(--line);}
+  button.danger{background:transparent; color:var(--red); border-color:var(--red);}
+  button.small{padding:5px 9px; font-size:12px;}
+  button:active{transform:translateY(1px);}
+
+  /* card with drafting corner ticks (signature element) */
+  .card{
+    position:relative;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:14px;
+    margin-bottom:10px;
+  }
+  .card::before, .card::after{
+    content:""; position:absolute; width:9px; height:9px;
+  }
+  .card::before{
+    top:-1px; left:-1px;
+    border-top:2px solid var(--blue); border-left:2px solid var(--blue);
+  }
+  .card::after{
+    bottom:-1px; right:-1px;
+    border-bottom:2px solid var(--blue); border-right:2px solid var(--blue);
+  }
+  .card.tight{padding:10px 12px;}
+  .card h3{font-size:15px; color:var(--blue-dark);}
+  .card .meta{font-size:12px; color:var(--ink-soft);}
+
+  .grid-2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+
+  .chip-row{display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;}
+  .chip{
+    font-size:12px; font-weight:600; padding:6px 9px; border-radius:20px;
+    border:1px solid var(--line); background:var(--paper); color:var(--ink-soft);
+    cursor:pointer; user-select:none; font-family:'IBM Plex Sans', sans-serif;
+  }
+  .chip[data-flag="absent"].active{background:var(--absent-bg); border-color:var(--absent-ink); color:var(--absent-ink);}
+  .chip[data-flag="nobook"].active{background:var(--nobook-bg); border-color:var(--nobook-ink); color:var(--nobook-ink);}
+  .chip[data-flag="disruptive"].active{background:var(--disruptive-bg); border-color:var(--disruptive-ink); color:var(--disruptive-ink);}
+  .chip[data-flag="participation"].active{background:var(--participation-bg); border-color:var(--participation-ink); color:var(--participation-ink);}
+
+  .student-row{
+    border:1px solid var(--line); border-radius:var(--radius); padding:9px 10px;
+    margin-bottom:8px; background:var(--card);
+  }
+  .student-row .sname{font-weight:600; font-size:14px;}
+  .note-input{margin-top:7px;}
+  .note-input input{font-size:13px; padding:6px 8px;}
+
+  .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px;}
+  .stat{
+    border:1px solid var(--line); border-radius:var(--radius); background:var(--card);
+    padding:10px; text-align:center;
+  }
+  .stat .num{font-family:'IBM Plex Mono', monospace; font-size:22px; font-weight:600; color:var(--blue-dark);}
+  .stat .lbl{font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em; margin-top:2px;}
+
+  .log-entry{border-left:3px solid var(--line); padding:6px 0 6px 10px; margin-bottom:6px;}
+  .log-entry .d{font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--blue);}
+  .log-entry .t{font-size:14px; margin:2px 0;}
+  .log-entry .flags{font-size:11px; color:var(--ink-soft);}
+
+  .empty{
+    text-align:center; padding:28px 14px; color:var(--ink-soft); font-size:14px;
+    border:1px dashed var(--line); border-radius:var(--radius);
+  }
+
+  nav.tabbar{
+    position:fixed; bottom:0; left:0; right:0; z-index:10;
+    background:var(--blue-dark); display:flex; justify-content:space-around;
+    padding:6px 2px calc(6px + env(safe-area-inset-bottom)) 2px;
+    border-top:1px solid var(--blue);
+  }
+  nav.tabbar button{
+    background:transparent; border:none; color:#B8C7D6;
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    font-size:10px; font-weight:600; padding:6px 4px; flex:1;
+  }
+  nav.tabbar button .ic{font-size:17px;}
+  nav.tabbar button.active{color:#fff;}
+  nav.tabbar button.active .ic{color:var(--amber);}
+
+  .lessons-list{max-height:260px; overflow-y:auto; margin-bottom:14px;}
+  .lesson-pick{
+    border:1px solid var(--line); border-radius:var(--radius); padding:8px 10px;
+    margin-bottom:6px; cursor:pointer; background:var(--card);
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .lesson-pick.selected{border-color:var(--blue); background:#EEF4F9;}
+  .lesson-pick .d{font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--blue);}
+  .lesson-pick .t{font-size:13px; color:var(--ink);}
+
+  .toolbar{display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;}
+  .save-msg{font-size:12px; color:var(--green); margin-top:6px; height:14px;}
+  .progress-card{cursor:pointer;}
+  .progress-card .bar{
+    height:5px; background:var(--paper2); border-radius:3px; margin-top:8px; overflow:hidden;
+  }
+  .progress-card .bar span{display:block; height:100%; background:var(--blue);}
+  a.linklike{color:var(--blue); font-weight:600; cursor:pointer;}
+  .inline-add{display:flex; gap:8px; margin-top:10px;}
+  .inline-add input{flex:1;}
+  .remove-x{color:var(--red); font-weight:700; cursor:pointer; font-size:13px; margin-left:8px;}
+  /* ---------- printable reports ---------- */
+  .print-sheet{
+    background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px; margin-top:10px;
+  }
+  .print-cover{ text-align:center; padding:26px 10px 22px 10px; border-bottom:2px solid var(--ink); margin-bottom:16px;}
+  .print-cover .eyebrow2{ font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:0.1em; text-transform:uppercase; color:var(--blue-dark);}
+  .print-cover h2{ font-size:24px; margin:6px 0 2px 0;}
+  .print-cover .sub{ font-size:14px; color:var(--ink-soft); margin-top:4px;}
+  .print-meta{ display:flex; justify-content:space-between; font-size:12px; color:var(--ink-soft); margin-bottom:14px; flex-wrap:wrap; gap:6px;}
+  table.report-table{ width:100%; border-collapse:collapse; font-size:11px; margin-bottom:14px;}
+  table.report-table th, table.report-table td{ border:1px solid #B9B2A0; padding:4px 5px; text-align:center;}
+  table.report-table th{ background:#F1EEE3; font-weight:600;}
+  table.report-table td.name-cell, table.report-table th.name-cell{ text-align:left; white-space:nowrap; font-weight:500;}
+  .report-legend{ font-size:11px; color:var(--ink-soft); margin-bottom:14px;}
+  .report-signature{ margin-top:34px; display:flex; justify-content:space-between; font-size:12px;}
+  .report-signature .line{ border-top:1px solid var(--ink); width:200px; padding-top:4px; text-align:center;}
+  .blank-cell{ height:20px; }
+  @media print{
+    body{ padding-bottom:0; background:#fff; }
+    header.top, nav.tabbar, .no-print{ display:none !important; }
+    .print-sheet{ border:none; padding:0; }
+    main{ max-width:none; padding:0; }
+    @page{ size:landscape; margin:12mm; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="eyebrow">Σχεδιασμός &amp; Τεχνολογία</div>
+  <h1>Βαθμολόγιο</h1>
+  <input type="text" id="teacherNameInput" placeholder="Το όνομά σου…">
+  <input type="text" id="schoolNameInput" placeholder="Σχολείο…">
+</header>
+<main id="app">
+  <div class="empty">Φόρτωση δεδομένων…</div>
+</main>
+
+<nav class="tabbar">
+  <button data-tab="progress"><span class="ic">▦</span>Πρόοδος</button>
+  <button data-tab="lesson"><span class="ic">✎</span>Μάθημα</button>
+  <button data-tab="student"><span class="ic">◔</span>Μαθητής</button>
+  <button data-tab="yearstart"><span class="ic">▤</span>Έναρξη</button>
+  <button data-tab="classes"><span class="ic">▥</span>Τμήματα</button>
+  <button data-tab="tests"><span class="ic">%</span>Διαγων.</button>
+  <button data-tab="print"><span class="ic">⎙</span>Εκτύπωση</button>
+</nav>
+
+<script>
+
+/* ============ ΣΥΓΧΡΟΝΙΣΜΟΣ ΜΕΤΑΞΥ ΣΥΣΚΕΥΩΝ (προαιρετικό) ============
+   Για να δουλεύει το ίδιο βαθμολόγιο σε κινητό + λάπτοπ, φτιάξε ένα δωρεάν
+   Firebase project (Firestore Database) και συμπλήρωσε τα στοιχεία του εδώ.
+   Αν το αφήσεις όπως είναι, η εφαρμογή αποθηκεύει κανονικά, αλλά μόνο
+   τοπικά σε κάθε συσκευή/browser ξεχωριστά. */
+const FIREBASE_CONFIG = {
+  apiKey: "PASTE_YOUR_API_KEY",
+  authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
+  projectId: "PASTE_YOUR_PROJECT_ID",
+  storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
+  messagingSenderId: "PASTE_SENDER_ID",
+  appId: "PASTE_APP_ID"
+};
+const FIREBASE_ENABLED = FIREBASE_CONFIG.apiKey !== "PASTE_YOUR_API_KEY";
+let db = null, unsubscribeSnapshot = null, applyingRemote = false;
+if(FIREBASE_ENABLED){
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.firestore();
+}
+const LOCAL_KEY = 'vathmologio-local-v1';
+function getSyncCode(){ return localStorage.getItem('vathmologio-sync-code') || ''; }
+function setSyncCode(code){ localStorage.setItem('vathmologio-sync-code', code); }
+
+function defaultState(){
+  const classes = [];
+  for(let i=1;i<=10;i++){ classes.push({id:'c'+i, name:'Τμήμα '+i, students:[]}); }
+  return { classes, lessons:[], attendance:{}, yearStart:{}, finalGrades:{}, teacherName:'', schoolName:'Γυμνάσιο Κοκκινοχωρίων', groups:{}, tests:[], testGrades:{} };
+}
+
+function schoolYearLabel(){
+  const now = new Date();
+  const y = now.getFullYear();
+  return (now.getMonth()>=7) ? (y+'-'+(y+1)) : ((y-1)+'-'+y);
+}
+
+let state = defaultState();
+let ui = {
+  tab:'progress',
+  selectedClassId:'c1',
+  selectedStudentId:null,
+  editingLessonId:null,
+  draftDate: new Date().toISOString().slice(0,10),
+  draftTopic:'',
+  draftFlags:{}, // studentId -> {absent,nobook,disruptive,participation,note}
+  saveMsg:'',
+  importSummary:null,
+  printType:'class',
+  printStudentId:null,
+  editingTestId:null,
+  draftTestTitle:'',
+  draftTestDate: new Date().toISOString().slice(0,10),
+  draftTestGrades:{}, // studentId -> grade string
+  testImportSummary:null
+};
+
+function uid(p){ return p+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+async function loadState(){
+  try{
+    const raw = localStorage.getItem(LOCAL_KEY);
+    if(raw) state = Object.assign(defaultState(), JSON.parse(raw));
+  }catch(e){ /* nothing saved yet, use defaults */ }
+  document.getElementById('teacherNameInput').value = state.teacherName || '';
+  document.getElementById('schoolNameInput').value = state.schoolName || '';
+  render();
+  attachSync();
+}
+document.getElementById('teacherNameInput').addEventListener('input', (e)=>{
+  state.teacherName = e.target.value;
+  persist();
+});
+document.getElementById('schoolNameInput').addEventListener('input', (e)=>{
+  state.schoolName = e.target.value;
+  persist();
+});
+
+function attachSync(){
+  if(!FIREBASE_ENABLED) return;
+  const code = getSyncCode();
+  if(!code) return;
+  if(unsubscribeSnapshot) unsubscribeSnapshot();
+  unsubscribeSnapshot = db.collection('gradebooks').doc(code).onSnapshot(doc=>{
+    if(doc.exists){
+      const remote = doc.data();
+      if(remote && remote.json){
+        applyingRemote = true;
+        state = Object.assign(defaultState(), JSON.parse(remote.json));
+        localStorage.setItem(LOCAL_KEY, remote.json);
+        document.getElementById('teacherNameInput').value = state.teacherName || '';
+        document.getElementById('schoolNameInput').value = state.schoolName || '';
+        render();
+        applyingRemote = false;
+      }
+    } else {
+      pushToFirestore();
+    }
+  }, err=>{ console.error('Sync error', err); });
+}
+
+function pushToFirestore(){
+  if(!FIREBASE_ENABLED) return;
+  const code = getSyncCode();
+  if(!code || !db) return;
+  db.collection('gradebooks').doc(code).set({ json: JSON.stringify(state), updatedAt: Date.now() });
+}
+
+let saveTimer=null;
+function persist(){
+  try{ localStorage.setItem(LOCAL_KEY, JSON.stringify(state)); }catch(e){ console.error('Local save error', e); }
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>{
+    if(FIREBASE_ENABLED && !applyingRemote) pushToFirestore();
+  }, 400);
+}
+
+function getClass(id){ return state.classes.find(c=>c.id===id); }
+function studentsOf(classId){ const c=getClass(classId); return c? c.students : []; }
+
+function classStats(classId){
+  const lessons = state.lessons.filter(l=>l.classId===classId).sort((a,b)=> a.date<b.date?1:-1);
+  return { count: lessons.length, last: lessons[0] || null };
+}
+
+function studentStats(classId, studentId){
+  const lessons = state.lessons.filter(l=>l.classId===classId);
+  let absent=0, nobook=0, disruptive=0, participation=0;
+  lessons.forEach(l=>{
+    const rec = (state.attendance[l.id]||{})[studentId];
+    if(rec){
+      if(rec.absent) absent++;
+      if(rec.nobook) nobook++;
+      if(rec.disruptive) disruptive++;
+      if(rec.participation) participation++;
+    }
+  });
+  return {absent, nobook, disruptive, participation, totalLessons: lessons.length};
+}
+
+/* ---------- RENDER ROOT ---------- */
+function render(){
+  document.querySelectorAll('nav.tabbar button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tab===ui.tab);
+  });
+  const app = document.getElementById('app');
+  if(ui.tab==='progress') app.innerHTML = renderProgress();
+  else if(ui.tab==='lesson') app.innerHTML = renderLesson();
+  else if(ui.tab==='student') app.innerHTML = renderStudent();
+  else if(ui.tab==='yearstart') app.innerHTML = renderYearStart();
+  else if(ui.tab==='classes') app.innerHTML = renderClasses();
+  else if(ui.tab==='tests') app.innerHTML = renderTests();
+  else if(ui.tab==='print') app.innerHTML = renderPrint();
+}
+
+/* ---------- TAB: ΠΡΟΟΔΟΣ ---------- */
+function renderProgress(){
+  const cards = state.classes.map(c=>{
+    const st = classStats(c.id);
+    const pct = Math.min(100, st.count*4);
+    const lastInfo = st.last
+      ? `<div class="meta">Τελευταίο μάθημα: <span class="mono">${st.last.date}</span></div>
+         <div style="font-size:13px;margin-top:3px;">${escapeHtml(st.last.topic || '(χωρίς τίτλο)')}</div>`
+      : `<div class="meta">Δεν έχει καταχωρηθεί μάθημα ακόμη</div>`;
+    return `
+      <div class="card progress-card" data-action="goto-class" data-class="${c.id}">
+        <h3>${escapeHtml(c.name)}</h3>
+        <div class="meta">${c.students.length} μαθητές · ${st.count} μαθήματα</div>
+        ${lastInfo}
+        <div class="bar"><span style="width:${pct}%"></span></div>
+      </div>`;
+  }).join('');
+  return `
+    <section class="block">
+      <div class="field-label">Πού έχεις φτάσει σε κάθε τμήμα</div>
+      <hr class="rule">
+      ${cards}
+    </section>`;
+}
+
+/* ---------- TAB: ΜΑΘΗΜΑ ---------- */
+function renderLesson(){
+  const cls = getClass(ui.selectedClassId);
+  const lessons = state.lessons.filter(l=>l.classId===ui.selectedClassId).sort((a,b)=> a.date<b.date?1:-1);
+  const students = cls.students;
+
+  const classOptions = state.classes.map(c=>
+    `<option value="${c.id}" ${c.id===ui.selectedClassId?'selected':''}>${escapeHtml(c.name)}</option>`
+  ).join('');
+
+  const lessonPicks = lessons.map(l=>`
+    <div class="lesson-pick ${l.id===ui.editingLessonId?'selected':''}" data-action="pick-lesson" data-lesson="${l.id}">
+      <div><span class="d">${l.date}</span><br><span class="t">${escapeHtml(l.topic||'(χωρίς τίτλο)')}</span></div>
+      <span style="font-size:16px;color:var(--ink-soft);">›</span>
+    </div>`).join('') || `<div class="empty">Δεν υπάρχουν καταχωρημένα μαθήματα για το τμήμα αυτό.</div>`;
+
+  const studentRows = students.length ? students.map(s=>{
+    const flags = ui.draftFlags[s.id] || {};
+    return `
+    <div class="student-row">
+      <div class="sname">${escapeHtml(s.name)}</div>
+      <div class="chip-row">
+        <span class="chip ${flags.absent?'active':''}" data-flag="absent" data-action="toggle-flag" data-student="${s.id}" data-flagname="absent">🚫 Απών</span>
+        <span class="chip ${flags.nobook?'active':''}" data-flag="nobook" data-action="toggle-flag" data-student="${s.id}" data-flagname="nobook">📕 Χωρίς βιβλίο</span>
+        <span class="chip ${flags.disruptive?'active':''}" data-flag="disruptive" data-action="toggle-flag" data-student="${s.id}" data-flagname="disruptive">😠 Ενόχληση</span>
+        <span class="chip ${flags.participation?'active':''}" data-flag="participation" data-action="toggle-flag" data-student="${s.id}" data-flagname="participation">🌟 Συμμετοχή+</span>
+      </div>
+      <div class="note-input">
+        <input type="text" placeholder="Σημείωση (προαιρετικό)" data-action="note-input" data-student="${s.id}" value="${escapeAttr(flags.note||'')}">
+      </div>
+    </div>`;
+  }).join('') : `<div class="empty">Το τμήμα αυτό δεν έχει μαθητές ακόμη.<br>Πρόσθεσέ τους από την καρτέλα «Τμήματα».</div>`;
+
+  applyStudentChipStates(); // no-op placeholder (states rendered via classes above using flags var directly)
+
+  return `
+    <section class="block">
+      <div class="field-label">Τμήμα</div>
+      <select data-action="select-class">${classOptions}</select>
+    </section>
+
+    <section class="block">
+      <div class="field-label">Ημερομηνία</div>
+      <div class="two-col">
+        <div><input type="date" value="${ui.draftDate}" data-action="set-date"></div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <label class="field-label">Τι έγινε στο μάθημα</label>
+        <textarea placeholder="π.χ. Εισαγωγή στο σχέδιο όψεων, άσκηση 3.2…" data-action="set-topic">${escapeHtml(ui.draftTopic)}</textarea>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="field-label">Παρουσιολόγιο τμήματος</div>
+      ${studentRows}
+    </section>
+
+    <section class="block">
+      <div class="toolbar">
+        <button data-action="save-lesson">${ui.editingLessonId? 'Ενημέρωση καταχώρησης' : 'Αποθήκευση μαθήματος'}</button>
+        ${ui.editingLessonId? '<button class="secondary" data-action="new-lesson">Νέα καταχώρηση</button>' : ''}
+        ${ui.editingLessonId? '<button class="danger" data-action="delete-lesson">Διαγραφή</button>' : ''}
+      </div>
+      <div class="save-msg">${ui.saveMsg}</div>
+    </section>
+
+    <section class="block">
+      <div class="field-label">Προηγούμενες καταχωρήσεις</div>
+      <hr class="rule">
+      <div class="lessons-list">${lessonPicks}</div>
+    </section>
+  `;
+}
+function applyStudentChipStates(){ /* handled inline via template above */ }
+
+/* ---------- TAB: ΕΝΑΡΞΗ ΧΡΟΝΙΑΣ ---------- */
+function renderYearStart(){
+  const cls = getClass(ui.selectedClassId);
+  const classOptions = state.classes.map(c=>
+    `<option value="${c.id}" ${c.id===ui.selectedClassId?'selected':''}>${escapeHtml(c.name)}</option>`
+  ).join('');
+
+  if(!state.yearStart[ui.selectedClassId]) state.yearStart[ui.selectedClassId] = {};
+  const ys = state.yearStart[ui.selectedClassId];
+
+  const rows = cls.students.length ? cls.students.map(s=>{
+    const rec = ys[s.id] || {assignmentDone:false, assignmentGrade:'', portfolioDone:false, portfolioGrade:'', coverDone:false, coverGrade:'', notes:''};
+    return `
+    <div class="card tight">
+      <h3 style="font-size:14px;">${escapeHtml(s.name)}</h3>
+      <div style="margin-top:8px;display:flex;flex-direction:column;gap:10px;">
+        <div>
+          <span class="chip ${rec.assignmentDone?'active':''}" style="${rec.assignmentDone?'background:var(--blue);border-color:var(--blue);color:#fff;':''}" data-action="toggle-ys" data-student="${s.id}" data-field="assignmentDone">${rec.assignmentDone?'✅ ':'📝 '}Εργασία παραδόθηκε</span>
+          <input type="text" style="margin-top:6px;" placeholder="Βαθμός / σχόλιο εργασίας" data-action="ys-text" data-student="${s.id}" data-field="assignmentGrade" value="${escapeAttr(rec.assignmentGrade)}">
+        </div>
+        <div>
+          <span class="chip ${rec.portfolioDone?'active':''}" style="${rec.portfolioDone?'background:var(--blue);border-color:var(--blue);color:#fff;':''}" data-action="toggle-ys" data-student="${s.id}" data-field="portfolioDone">${rec.portfolioDone?'✅ ':'📁 '}Φάκελος παραδόθηκε</span>
+          <input type="text" style="margin-top:6px;" placeholder="Βαθμός / σχόλιο φακέλου" data-action="ys-text" data-student="${s.id}" data-field="portfolioGrade" value="${escapeAttr(rec.portfolioGrade)}">
+        </div>
+        <div>
+          <span class="chip ${rec.coverDone?'active':''}" style="${rec.coverDone?'background:var(--blue);border-color:var(--blue);color:#fff;':''}" data-action="toggle-ys" data-student="${s.id}" data-field="coverDone">${rec.coverDone?'✅ ':'🗂️ '}Εξώφυλλο φακέλου παραδόθηκε</span>
+          <input type="text" style="margin-top:6px;" placeholder="Βαθμός / σχόλιο εξωφύλλου" data-action="ys-text" data-student="${s.id}" data-field="coverGrade" value="${escapeAttr(rec.coverGrade)}">
+        </div>
+      </div>
+    </div>`;
+  }).join('') : `<div class="empty">Το τμήμα αυτό δεν έχει μαθητές ακόμη.</div>`;
+
+  return `
+    <section class="block">
+      <div class="field-label">Τμήμα</div>
+      <select data-action="select-class">${classOptions}</select>
+    </section>
+    <section class="block">
+      <div class="field-label">Εργασία, φάκελος &amp; εξώφυλλο έναρξης χρονιάς</div>
+      <hr class="rule">
+      ${rows}
+    </section>
+  `;
+}
+
+/* ---------- TAB: ΜΑΘΗΤΗΣ ---------- */
+function renderStudent(){
+  const cls = getClass(ui.selectedClassId);
+  const classOptions = state.classes.map(c=>
+    `<option value="${c.id}" ${c.id===ui.selectedClassId?'selected':''}>${escapeHtml(c.name)}</option>`
+  ).join('');
+
+  if(!cls.students.length){
+    return `
+      <section class="block">
+        <div class="field-label">Τμήμα</div>
+        <select data-action="select-class">${classOptions}</select>
+      </section>
+      <div class="empty">Το τμήμα αυτό δεν έχει μαθητές ακόμη.</div>`;
+  }
+
+  if(!ui.selectedStudentId || !cls.students.find(s=>s.id===ui.selectedStudentId)){
+    ui.selectedStudentId = cls.students[0].id;
+  }
+  const studentOptions = cls.students.map(s=>
+    `<option value="${s.id}" ${s.id===ui.selectedStudentId?'selected':''}>${escapeHtml(s.name)}</option>`
+  ).join('');
+
+  const stats = studentStats(ui.selectedClassId, ui.selectedStudentId);
+  const ys = (state.yearStart[ui.selectedClassId] || {})[ui.selectedStudentId] || {};
+  const fg = (state.finalGrades[ui.selectedClassId] || {})[ui.selectedStudentId] || {grade:'', notes:''};
+  const penalty = bookPenalty(ui.selectedClassId, ui.selectedStudentId);
+  const testAvg = studentTestAverage(ui.selectedClassId, ui.selectedStudentId);
+
+  const lessons = state.lessons.filter(l=>l.classId===ui.selectedClassId).sort((a,b)=> a.date<b.date?1:-1);
+  const log = lessons.map(l=>{
+    const rec = (state.attendance[l.id]||{})[ui.selectedStudentId] || {};
+    const flags = [];
+    if(rec.absent) flags.push('🚫 Απών');
+    if(rec.nobook) flags.push('📕 Χωρίς βιβλίο');
+    if(rec.disruptive) flags.push('😠 Ενόχληση');
+    if(rec.participation) flags.push('🌟 Συμμετοχή+');
+    return `
+      <div class="log-entry">
+        <div class="d">${l.date}</div>
+        <div class="t">${escapeHtml(l.topic||'(χωρίς τίτλο)')}</div>
+        ${flags.length? `<div class="flags">${flags.join(' · ')}</div>`:''}
+        ${rec.note? `<div class="flags">Σημείωση: ${escapeHtml(rec.note)}</div>`:''}
+      </div>`;
+  }).join('') || `<div class="empty">Δεν υπάρχουν ακόμη καταχωρήσεις μαθημάτων.</div>`;
+
+  return `
+    <section class="block">
+      <div class="field-label">Τμήμα</div>
+      <select data-action="select-class">${classOptions}</select>
+      <div class="field-label" style="margin-top:10px;">Μαθητής</div>
+      <select data-action="select-student">${studentOptions}</select>
+    </section>
+
+    <section class="block">
+      <div class="stat-grid">
+        <div class="stat"><div class="num">${stats.absent}</div><div class="lbl">🚫 Απουσίες</div></div>
+        <div class="stat"><div class="num">${stats.nobook}</div><div class="lbl">📕 Χωρίς βιβλίο</div></div>
+        <div class="stat"><div class="num">${stats.disruptive}</div><div class="lbl">😠 Ενόχληση</div></div>
+        <div class="stat"><div class="num">${stats.participation}</div><div class="lbl">🌟 Συμμετοχή+</div></div>
+      </div>
+      ${penalty>0 ? `<div class="card tight" style="border-color:var(--nobook-ink);background:var(--nobook-bg);">
+        <div style="font-size:13px;color:var(--nobook-ink);">📕 Ξέχασε το βιβλίο <strong>${stats.nobook}</strong> φορές → κάθε 2 φορές = −1 στον βαθμό ⇒ προτεινόμενη μείωση: <strong>−${penalty}</strong></div>
+      </div>` : ''}
+      <div class="card tight">
+        <div class="meta">Έναρξη χρονιάς</div>
+        <div style="font-size:13px;margin-top:4px;">
+          Εργασία: ${ys.assignmentDone? '✔ Παραδόθηκε':'— Εκκρεμεί'} ${ys.assignmentGrade? '('+escapeHtml(ys.assignmentGrade)+')':''}<br>
+          Φάκελος: ${ys.portfolioDone? '✔ Παραδόθηκε':'— Εκκρεμεί'} ${ys.portfolioGrade? '('+escapeHtml(ys.portfolioGrade)+')':''}<br>
+          Εξώφυλλο: ${ys.coverDone? '✔ Παραδόθηκε':'— Εκκρεμεί'} ${ys.coverGrade? '('+escapeHtml(ys.coverGrade)+')':''}
+        </div>
+      </div>
+      ${testAvg!==null ? `<div class="card tight"><div class="meta">Μέσος όρος διαγωνισμάτων</div><div style="font-size:16px;margin-top:2px;" class="mono">${testAvg.toFixed(1)}</div></div>` : ''}
+    </section>
+
+    <section class="block">
+      <div class="field-label">Τελικός βαθμός τετραμήνου</div>
+      <div class="two-col">
+        <div><input type="text" placeholder="π.χ. 18" data-action="set-final-grade" value="${escapeAttr(fg.grade)}"></div>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <textarea placeholder="Σημειώσεις για τον τελικό βαθμό…" data-action="set-final-notes">${escapeHtml(fg.notes||'')}</textarea>
+      </div>
+      <button data-action="save-final-grade">Αποθήκευση βαθμού</button>
+      <div class="save-msg">${ui.saveMsg}</div>
+    </section>
+
+    <section class="block">
+      <div class="field-label">Ιστορικό μαθημάτων</div>
+      <hr class="rule">
+      ${log}
+    </section>
+  `;
+}
+
+/* ---------- TAB: ΤΜΗΜΑΤΑ ---------- */
+function groupsOf(classId){
+  if(!state.groups[classId]) state.groups[classId] = [];
+  return state.groups[classId];
+}
+function groupOfStudent(classId, studentId){
+  return groupsOf(classId).find(g=> g.memberIds.includes(studentId)) || null;
+}
+function testsOf(classId){ return state.tests.filter(t=>t.classId===classId); }
+function studentTestAverage(classId, studentId){
+  const tests = testsOf(classId);
+  const nums = [];
+  tests.forEach(t=>{
+    const g = (state.testGrades[t.id]||{})[studentId];
+    const n = parseFloat(String(g).replace(',','.'));
+    if(g!==undefined && g!=='' && !isNaN(n)) nums.push(n);
+  });
+  if(!nums.length) return null;
+  return nums.reduce((a,b)=>a+b,0)/nums.length;
+}
+function bookPenalty(classId, studentId){
+  return Math.floor(studentStats(classId, studentId).nobook / 2);
+}
+function renderGroups(cls){
+  const groups = groupsOf(cls.id);
+  if(!cls.students.length) return `<div class="empty">Πρόσθεσε πρώτα μαθητές για να φτιάξεις ομάδες.</div>`;
+  if(!groups.length) return `<div class="empty">Δεν έχουν φτιαχτεί ομάδες ακόμη.</div>`;
+  return groups.map(g=>`
+    <div class="card tight">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="font-size:14px;margin:0;">${escapeHtml(g.name)} <span class="meta">(${g.memberIds.length})</span></h3>
+        <span class="remove-x" data-action="remove-group" data-group="${g.id}">Διαγραφή</span>
+      </div>
+      <div class="chip-row">
+        ${cls.students.map(s=>{
+          const active = g.memberIds.includes(s.id);
+          return `<span class="chip ${active?'active':''}" style="${active?'background:var(--participation-bg);border-color:var(--participation-ink);color:var(--participation-ink);':''}" data-action="toggle-group-member" data-group="${g.id}" data-student="${s.id}">${escapeHtml(s.name)}</span>`;
+        }).join('')}
+      </div>
+    </div>`).join('');
+}
+
+/* ---------- TAB: ΕΚΤΥΠΩΣΗ ---------- */
+function renderPrint(){
+  const cls = getClass(ui.selectedClassId);
+  const classOptions = state.classes.map(c=>
+    `<option value="${c.id}" ${c.id===ui.selectedClassId?'selected':''}>${escapeHtml(c.name)}</option>`
+  ).join('');
+
+  if(ui.printType==='student' && (!ui.printStudentId || !cls.students.find(s=>s.id===ui.printStudentId))){
+    ui.printStudentId = cls.students[0] ? cls.students[0].id : null;
+  }
+  const studentOptions = cls.students.map(s=>
+    `<option value="${s.id}" ${s.id===ui.printStudentId?'selected':''}>${escapeHtml(s.name)}</option>`
+  ).join('');
+
+  const controls = `
+    <section class="block no-print">
+      <div class="field-label">Τμήμα</div>
+      <select data-action="select-class">${classOptions}</select>
+      <div class="field-label" style="margin-top:10px;">Τύπος αναφοράς</div>
+      <select data-action="select-print-type">
+        <option value="class" ${ui.printType==='class'?'selected':''}>Συνολική αναφορά τμήματος</option>
+        <option value="student" ${ui.printType==='student'?'selected':''}>Ατομική αναφορά μαθητή</option>
+        <option value="blank" ${ui.printType==='blank'?'selected':''}>Κενό φύλλο παρουσιών (χειρόγραφο)</option>
+      </select>
+      ${ui.printType==='student' ? `
+        <div class="field-label" style="margin-top:10px;">Μαθητής</div>
+        <select data-action="select-print-student">${studentOptions}</select>
+      ` : ''}
+      <button style="margin-top:12px;" data-action="do-print">🖨️ Εκτύπωση / Αποθήκευση ως PDF</button>
+    </section>`;
+
+  let sheet = '';
+  if(ui.printType==='class') sheet = buildClassReport(cls);
+  else if(ui.printType==='student' && ui.printStudentId) sheet = buildStudentReport(cls, ui.printStudentId);
+  else if(ui.printType==='blank') sheet = buildBlankSheet(cls);
+  else sheet = `<div class="empty">Πρόσθεσε πρώτα μαθητές στο τμήμα.</div>`;
+
+  return controls + `<div class="print-sheet">${sheet}</div>`;
+}
+
+function reportCover(cls, subtitle){
+  return `
+    <div class="print-cover">
+      <div class="eyebrow2">${escapeHtml(state.schoolName||'Σχεδιασμός & Τεχνολογία')}</div>
+      <h2>${escapeHtml(subtitle)}</h2>
+      <div class="sub">Σχεδιασμός &amp; Τεχνολογία · ${escapeHtml(cls.name)} · Σχολικό έτος ${schoolYearLabel()}</div>
+    </div>
+    <div class="print-meta">
+      <span>Εκπαιδευτικός: ${escapeHtml(state.teacherName||'—')}</span>
+      <span>Ημερομηνία εκτύπωσης: ${new Date().toLocaleDateString('el-GR')}</span>
+    </div>`;
+}
+
+const LESSONS_PER_PAGE = 14;
+
+function buildClassReport(cls){
+  if(!cls.students.length) return `<div class="empty">Το τμήμα αυτό δεν έχει μαθητές.</div>`;
+  const lessons = state.lessons.filter(l=>l.classId===cls.id).sort((a,b)=> a.date<b.date?-1:1);
+  const ys = state.yearStart[cls.id] || {};
+  const fg = state.finalGrades[cls.id] || {};
+
+  const pages = [];
+  const chunks = lessons.length ? [] : [[]];
+  for(let i=0;i<lessons.length;i+=LESSONS_PER_PAGE){ chunks.push(lessons.slice(i, i+LESSONS_PER_PAGE)); }
+  const totalPages = chunks.length;
+
+  chunks.forEach((chunk, pageIdx)=>{
+    const isLast = pageIdx===totalPages-1;
+    const lessonHeaders = chunk.map(l=>`<th>${l.date.slice(5).replace('-','/')}</th>`).join('');
+    const rows = cls.students.map(s=>{
+      const grp = groupOfStudent(cls.id, s.id);
+      const cells = chunk.map(l=>{
+        const rec = (state.attendance[l.id]||{})[s.id] || {};
+        const codes = [];
+        if(rec.absent) codes.push('Α');
+        if(rec.nobook) codes.push('Β');
+        if(rec.disruptive) codes.push('Ε');
+        if(rec.participation) codes.push('Σ');
+        return `<td>${codes.join('')}</td>`;
+      }).join('');
+      const y = ys[s.id] || {};
+      const f = fg[s.id] || {};
+      const avg = studentTestAverage(cls.id, s.id);
+      const pen = bookPenalty(cls.id, s.id);
+      return `<tr>
+        <td class="name-cell">${escapeHtml(s.name)}${grp? ' <span style="color:var(--ink-soft);">('+escapeHtml(grp.name)+')</span>':''}</td>
+        <td>${y.assignmentDone?'✔':'—'}</td>
+        <td>${y.portfolioDone?'✔':'—'}</td>
+        <td>${y.coverDone?'✔':'—'}</td>
+        ${cells}
+        ${isLast? `<td>${avg!==null? avg.toFixed(1):'—'}</td><td>${pen>0? '−'+pen : '—'}</td><td><strong>${escapeHtml(f.grade||'')}</strong></td>` : ''}
+      </tr>`;
+    }).join('');
+
+    const header = pageIdx===0
+      ? reportCover(cls, 'Συνολική Αναφορά Τμήματος')
+      : `<div class="print-meta" style="font-size:13px;"><strong>${escapeHtml(cls.name)} — συνέχεια</strong><span>Σελίδα ${pageIdx+1}/${totalPages}</span></div>`;
+
+    const pageBreakStyle = isLast ? '' : 'style="page-break-after:always;"';
+    pages.push(`<div ${pageBreakStyle}>
+      ${header}
+      <table class="report-table">
+        <thead><tr>
+          <th class="name-cell">Μαθητής</th>
+          <th>Εργασία</th><th>Φάκελος</th><th>Εξώφυλλο</th>
+          ${lessonHeaders}
+          ${isLast? '<th>Μ.Ο. Διαγ.</th><th>Ποιν. Βιβλ.</th><th>Τελ. Βαθμός</th>' : ''}
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      ${isLast ? `
+        <div class="report-legend">Υπόμνημα: Α = Απών · Β = Χωρίς βιβλίο · Ε = Ενόχληση · Σ = Θετική συμμετοχή · Ποιν. Βιβλ. = προτεινόμενη μείωση βαθμού (−1 ανά 2 φορές χωρίς βιβλίο). Σύνολο μαθημάτων: ${lessons.length}${totalPages>1? ' σε '+totalPages+' σελίδες':''}.</div>
+        <div class="report-signature">
+          <div class="line">Υπογραφή εκπαιδευτικού</div>
+          <div class="line">Ημερομηνία</div>
+        </div>` : ''}
+    </div>`);
+  });
+
+  return pages.join('');
+}
+
+function buildStudentReport(cls, studentId){
+  const s = cls.students.find(x=>x.id===studentId);
+  if(!s) return `<div class="empty">Επίλεξε μαθητή.</div>`;
+  const stats = studentStats(cls.id, studentId);
+  const ys = (state.yearStart[cls.id]||{})[studentId] || {};
+  const fg = (state.finalGrades[cls.id]||{})[studentId] || {};
+  const grp = groupOfStudent(cls.id, studentId);
+  const lessons = state.lessons.filter(l=>l.classId===cls.id).sort((a,b)=> a.date<b.date?-1:1);
+
+  const rows = lessons.map(l=>{
+    const rec = (state.attendance[l.id]||{})[studentId] || {};
+    const codes = [];
+    if(rec.absent) codes.push('Απών');
+    if(rec.nobook) codes.push('Χωρίς βιβλίο');
+    if(rec.disruptive) codes.push('Ενόχληση');
+    if(rec.participation) codes.push('Συμμετοχή+');
+    return `<tr>
+      <td>${l.date}</td>
+      <td class="name-cell">${escapeHtml(l.topic||'—')}</td>
+      <td>${codes.join(', ')||'—'}</td>
+      <td class="name-cell">${escapeHtml(rec.note||'')}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="4">Δεν υπάρχουν καταχωρήσεις.</td></tr>`;
+
+  const tests = testsOf(cls.id).slice().sort((a,b)=> a.date<b.date?-1:1);
+  const testRows = tests.map(t=>{
+    const g = (state.testGrades[t.id]||{})[studentId];
+    return `<tr><td>${t.date}</td><td class="name-cell">${escapeHtml(t.title||'—')}</td><td>${g!==undefined && g!==''? escapeHtml(String(g)) : '—'}</td></tr>`;
+  }).join('');
+
+  return reportCover(cls, 'Ατομική Αναφορά Μαθητή') + `
+    <div class="print-meta" style="font-size:14px;">
+      <span><strong>${escapeHtml(s.name)}</strong>${grp? ' — '+escapeHtml(grp.name):''}</span>
+      <span>Απουσίες: ${stats.absent} · Χωρίς βιβλίο: ${stats.nobook} · Ενόχληση: ${stats.disruptive} · Συμμετοχή+: ${stats.participation}</span>
+    </div>
+    <div class="print-meta">
+      <span>Έναρξη χρονιάς — Εργασία: ${ys.assignmentDone?'Παραδόθηκε':'Εκκρεμεί'} ${ys.assignmentGrade?'('+escapeHtml(ys.assignmentGrade)+')':''}</span>
+      <span>Φάκελος: ${ys.portfolioDone?'Παραδόθηκε':'Εκκρεμεί'} ${ys.portfolioGrade?'('+escapeHtml(ys.portfolioGrade)+')':''}</span>
+      <span>Εξώφυλλο: ${ys.coverDone?'Παραδόθηκε':'Εκκρεμεί'} ${ys.coverGrade?'('+escapeHtml(ys.coverGrade)+')':''}</span>
+    </div>
+    <table class="report-table">
+      <thead><tr><th>Ημερομηνία</th><th class="name-cell">Θέμα μαθήματος</th><th>Σημεία</th><th class="name-cell">Σημείωση</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    ${tests.length? `
+    <div class="field-label" style="margin-top:6px;">Διαγωνίσματα</div>
+    <table class="report-table">
+      <thead><tr><th>Ημερομηνία</th><th class="name-cell">Τίτλος</th><th>Βαθμός</th></tr></thead>
+      <tbody>${testRows}</tbody>
+    </table>` : ''}
+    <div class="print-meta" style="font-size:14px;"><strong>Τελικός βαθμός τετραμήνου: ${escapeHtml(fg.grade||'—')}</strong></div>
+    ${fg.notes? `<div class="report-legend">Σημειώσεις: ${escapeHtml(fg.notes)}</div>` : ''}
+    <div class="report-signature">
+      <div class="line">Υπογραφή εκπαιδευτικού</div>
+      <div class="line">Ημερομηνία</div>
+    </div>`;
+}
+
+function buildBlankSheet(cls){
+  if(!cls.students.length) return `<div class="empty">Το τμήμα αυτό δεν έχει μαθητές.</div>`;
+  const rows = cls.students.map((s,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td class="name-cell">${escapeHtml(s.name)}</td>
+      <td class="blank-cell"></td><td class="blank-cell"></td><td class="blank-cell"></td>
+      <td class="blank-cell"></td><td class="blank-cell"></td><td class="blank-cell"></td>
+    </tr>`).join('');
+  return reportCover(cls, 'Κενό Φύλλο Παρουσιών') + `
+    <div class="report-legend">Χειρόγραφη χρήση όταν δεν είναι διαθέσιμη η συσκευή — συμπλήρωσε ημερομηνία σε κάθε στήλη.</div>
+    <table class="report-table">
+      <thead><tr>
+        <th>#</th><th class="name-cell">Μαθητής</th>
+        <th></th><th></th><th></th><th></th><th></th><th></th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+/* ---------- TAB: ΔΙΑΓΩΝΙΣΜΑΤΑ ---------- */
+function renderTests(){
+  const cls = getClass(ui.selectedClassId);
+  const classOptions = state.classes.map(c=>
+    `<option value="${c.id}" ${c.id===ui.selectedClassId?'selected':''}>${escapeHtml(c.name)}</option>`
+  ).join('');
+
+  const tests = testsOf(ui.selectedClassId).slice().sort((a,b)=> a.date<b.date?1:-1);
+  const testPicks = tests.map(t=>`
+    <div class="lesson-pick ${t.id===ui.editingTestId?'selected':''}" data-action="pick-test" data-test="${t.id}">
+      <div><span class="d">${t.date}</span><br><span class="t">${escapeHtml(t.title||'(χωρίς τίτλο)')}</span></div>
+      <span style="font-size:16px;color:var(--ink-soft);">›</span>
+    </div>`).join('') || `<div class="empty">Δεν υπάρχουν καταχωρημένα διαγωνίσματα για το τμήμα αυτό.</div>`;
+
+  const studentRows = cls.students.length ? cls.students.map(s=>{
+    const val = ui.draftTestGrades[s.id] !== undefined ? ui.draftTestGrades[s.id] : '';
+    return `
+    <div class="student-row" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+      <div class="sname">${escapeHtml(s.name)}</div>
+      <input type="text" inputmode="decimal" style="width:70px;text-align:center;" placeholder="—" data-action="set-test-grade" data-student="${s.id}" value="${escapeAttr(val)}">
+    </div>`;
+  }).join('') : `<div class="empty">Το τμήμα αυτό δεν έχει μαθητές ακόμη.</div>`;
+
+  return `
+    <section class="block">
+      <div class="field-label">Τμήμα</div>
+      <select data-action="select-class">${classOptions}</select>
+    </section>
+
+    <section class="block">
+      <div class="field-label">Στοιχεία διαγωνίσματος</div>
+      <div class="two-col" style="margin-top:8px;">
+        <div><input type="date" value="${ui.draftTestDate}" data-action="set-test-date"></div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <input type="text" placeholder="Τίτλος (π.χ. Διαγώνισμα 1ου τετραμήνου)" data-action="set-test-title" value="${escapeAttr(ui.draftTestTitle)}">
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="field-label">Εισαγωγή βαθμών από Excel (για αυτό το διαγώνισμα)</div>
+      <hr class="rule">
+      <div class="card tight">
+        <div style="font-size:13px;color:var(--ink-soft);margin-bottom:8px;">
+          Στήλες: <strong>Ονοματεπώνυμο</strong> και <strong>Βαθμός</strong>. Αντιστοιχίζει με τους μαθητές
+          του επιλεγμένου τμήματος βάσει ονόματος.
+        </div>
+        <input type="file" id="testExcelInput" data-action="import-test-excel" accept=".xlsx,.xls">
+        ${ui.testImportSummary ? `<div class="save-msg" style="height:auto;line-height:1.5;">${ui.testImportSummary}</div>` : ''}
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="field-label">Βαθμοί μαθητών</div>
+      ${studentRows}
+    </section>
+
+    <section class="block">
+      <div class="toolbar">
+        <button data-action="save-test">${ui.editingTestId? 'Ενημέρωση διαγωνίσματος' : 'Αποθήκευση διαγωνίσματος'}</button>
+        ${ui.editingTestId? '<button class="secondary" data-action="new-test">Νέο διαγώνισμα</button>' : ''}
+        ${ui.editingTestId? '<button class="danger" data-action="delete-test">Διαγραφή</button>' : ''}
+      </div>
+      <div class="save-msg">${ui.saveMsg}</div>
+    </section>
+
+    <section class="block">
+      <div class="field-label">Προηγούμενα διαγωνίσματα</div>
+      <hr class="rule">
+      <div class="lessons-list">${testPicks}</div>
+    </section>
+  `;
+}
+
+function renderClasses(){
+  const cls = getClass(ui.selectedClassId);
+  const classOptions = state.classes.map(c=>
+    `<option value="${c.id}" ${c.id===ui.selectedClassId?'selected':''}>${escapeHtml(c.name)}</option>`
+  ).join('');
+
+  const studentRows = cls.students.map(s=>`
+    <div class="lesson-pick">
+      <div class="t">${escapeHtml(s.name)}</div>
+      <span class="remove-x" data-action="remove-student" data-student="${s.id}">Αφαίρεση</span>
+    </div>`).join('') || `<div class="empty">Δεν έχουν προστεθεί μαθητές ακόμη.</div>`;
+
+  return `
+    <section class="block">
+      <div class="field-label">Επιλογή τμήματος</div>
+      <select data-action="select-class">${classOptions}</select>
+      <div class="field-label" style="margin-top:10px;">Όνομα τμήματος</div>
+      <input type="text" value="${escapeAttr(cls.name)}" data-action="rename-class">
+    </section>
+
+    <section class="block">
+      <div class="field-label">Εισαγωγή μαθητών από Excel</div>
+      <hr class="rule">
+      <div class="card tight">
+        <div style="font-size:13px;color:var(--ink-soft);margin-bottom:8px;">
+          Το αρχείο (.xlsx) πρέπει να έχει δύο στήλες με επικεφαλίδες: μία με το
+          <strong>ονοματεπώνυμο</strong> του μαθητή και μία με το <strong>τμήμα</strong> του
+          (π.χ. «Ονοματεπώνυμο» και «Τμήμα»). Οι μαθητές μπαίνουν αυτόματα στο σωστό τμήμα —
+          αν το όνομα τμήματος στο αρχείο ταιριάζει με υπάρχον τμήμα, προστίθενται εκεί·
+          αλλιώς καταλαμβάνουν το επόμενο άδειο τμήμα (Τμήμα 1, 2…) και το μετονομάζουν.
+        </div>
+        <input type="file" id="excelFileInput" data-action="import-excel" accept=".xlsx,.xls">
+        ${ui.importSummary ? `<div class="save-msg" style="height:auto;line-height:1.5;">${ui.importSummary}</div>` : ''}
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="field-label">Μαθητές (${cls.students.length})</div>
+      <hr class="rule">
+      ${studentRows}
+      <div class="inline-add">
+        <input type="text" placeholder="Ονοματεπώνυμο μαθητή" id="newStudentName">
+        <button data-action="add-student">Προσθήκη</button>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="field-label">Ομάδες εργασίας</div>
+      <hr class="rule">
+      <div style="font-size:12px;color:var(--ink-soft);margin-bottom:8px;">
+        Χρήσιμο όταν βάζεις τους μαθητές να δουλέψουν σε ομάδες για εργασία/κατασκευή.
+        Πάτα σε ένα όνομα για να το προσθέσεις/αφαιρέσεις από την ομάδα.
+      </div>
+      ${renderGroups(cls)}
+      <div class="inline-add">
+        <input type="text" placeholder="π.χ. Ομάδα Α" id="newGroupName">
+        <button data-action="add-group">Νέα ομάδα</button>
+      </div>
+    </section>
+
+    <section class="block">
+      <div class="field-label">Συγχρονισμός μεταξύ συσκευών</div>
+      <hr class="rule">
+      ${FIREBASE_ENABLED ? `
+        <div class="card tight">
+          <div class="field-label">Κωδικός συγχρονισμού (ίδιος σε όλες τις συσκευές)</div>
+          <input type="text" id="syncCodeInput" placeholder="π.χ. maria-sxediasmos-2026" value="${escapeAttr(getSyncCode())}">
+          <button style="margin-top:8px;" data-action="save-sync-code">Ενεργοποίηση συγχρονισμού</button>
+          <div class="save-msg">${getSyncCode() ? '✅ Ενεργό σε αυτή τη συσκευή — κωδικός: '+escapeHtml(getSyncCode()) : 'Δεν έχει οριστεί ακόμη.'}</div>
+        </div>
+      ` : `<div class="empty">Ο συγχρονισμός δεν έχει ρυθμιστεί ακόμη σε αυτό το αρχείο.<br>Χρειάζεται να συμπληρώσεις το FIREBASE_CONFIG στον κώδικα.</div>`}
+    </section>
+
+    <section class="block">
+      <button class="danger" data-action="reset-all">Επαναφορά όλων των δεδομένων</button>
+    </section>
+  `;
+}
+
+/* ---------- HELPERS ---------- */
+function escapeHtml(str){
+  return String(str||'').replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+}
+function escapeAttr(str){
+  return String(str||'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+
+/* ---------- EVENT HANDLING ---------- */
+document.addEventListener('click', (e)=>{
+  const tabBtn = e.target.closest('nav.tabbar button');
+  if(tabBtn){ ui.tab = tabBtn.dataset.tab; ui.saveMsg=''; render(); return; }
+
+  const el = e.target.closest('[data-action]');
+  if(!el) return;
+  const action = el.dataset.action;
+
+  if(action==='goto-class'){
+    ui.selectedClassId = el.dataset.class; ui.tab='lesson'; ui.editingLessonId=null;
+    ui.draftDate = new Date().toISOString().slice(0,10); ui.draftTopic=''; ui.draftFlags={};
+    render();
+  }
+  else if(action==='toggle-flag'){
+    const sid = el.dataset.student, fname = el.dataset.flagname;
+    if(!ui.draftFlags[sid]) ui.draftFlags[sid] = {};
+    ui.draftFlags[sid][fname] = !ui.draftFlags[sid][fname];
+    render();
+  }
+  else if(action==='pick-lesson'){
+    const l = state.lessons.find(x=>x.id===el.dataset.lesson);
+    if(l){
+      ui.editingLessonId = l.id;
+      ui.draftDate = l.date;
+      ui.draftTopic = l.topic;
+      ui.draftFlags = JSON.parse(JSON.stringify(state.attendance[l.id] || {}));
+      render();
+    }
+  }
+  else if(action==='new-lesson'){
+    ui.editingLessonId=null; ui.draftDate=new Date().toISOString().slice(0,10);
+    ui.draftTopic=''; ui.draftFlags={}; render();
+  }
+  else if(action==='save-lesson'){
+    saveLesson();
+  }
+  else if(action==='delete-lesson'){
+    if(ui.editingLessonId){
+      state.lessons = state.lessons.filter(l=>l.id!==ui.editingLessonId);
+      delete state.attendance[ui.editingLessonId];
+      persist();
+      ui.editingLessonId=null; ui.draftTopic=''; ui.draftFlags={};
+      ui.saveMsg='Η καταχώρηση διαγράφηκε.';
+      render();
+    }
+  }
+  else if(action==='pick-test'){
+    const t = state.tests.find(x=>x.id===el.dataset.test);
+    if(t){
+      ui.editingTestId = t.id;
+      ui.draftTestDate = t.date;
+      ui.draftTestTitle = t.title;
+      ui.draftTestGrades = Object.assign({}, state.testGrades[t.id] || {});
+      render();
+    }
+  }
+  else if(action==='new-test'){
+    ui.editingTestId=null; ui.draftTestDate=new Date().toISOString().slice(0,10);
+    ui.draftTestTitle=''; ui.draftTestGrades={}; render();
+  }
+  else if(action==='save-test'){
+    saveTest();
+  }
+  else if(action==='delete-test'){
+    if(ui.editingTestId){
+      state.tests = state.tests.filter(t=>t.id!==ui.editingTestId);
+      delete state.testGrades[ui.editingTestId];
+      persist();
+      ui.editingTestId=null; ui.draftTestTitle=''; ui.draftTestGrades={};
+      ui.saveMsg='Το διαγώνισμα διαγράφηκε.';
+      render();
+    }
+  }
+  else if(action==='toggle-ys'){
+    const cid = ui.selectedClassId, sid=el.dataset.student, field=el.dataset.field;
+    if(!state.yearStart[cid]) state.yearStart[cid]={};
+    if(!state.yearStart[cid][sid]) state.yearStart[cid][sid]={assignmentDone:false, assignmentGrade:'', portfolioDone:false, portfolioGrade:'', coverDone:false, coverGrade:'', notes:''};
+    state.yearStart[cid][sid][field] = !state.yearStart[cid][sid][field];
+    persist(); render();
+  }
+  else if(action==='remove-student'){
+    const cls = getClass(ui.selectedClassId);
+    if(confirm('Αφαίρεση μαθητή από το τμήμα; Το ιστορικό μαθημάτων θα παραμείνει αποθηκευμένο.')){
+      const sid = el.dataset.student;
+      cls.students = cls.students.filter(s=>s.id!==sid);
+      groupsOf(cls.id).forEach(g=>{ g.memberIds = g.memberIds.filter(id=>id!==sid); });
+      persist(); render();
+    }
+  }
+  else if(action==='add-student'){
+    const input = document.getElementById('newStudentName');
+    const name = input.value.trim();
+    if(name){
+      getClass(ui.selectedClassId).students.push({id:uid('s'), name});
+      input.value='';
+      persist(); render();
+    }
+  }
+  else if(action==='add-group'){
+    const input = document.getElementById('newGroupName');
+    const name = input.value.trim();
+    if(name){
+      groupsOf(ui.selectedClassId).push({id:uid('g'), name, memberIds:[]});
+      input.value='';
+      persist(); render();
+    }
+  }
+  else if(action==='remove-group'){
+    if(confirm('Διαγραφή αυτής της ομάδας;')){
+      state.groups[ui.selectedClassId] = groupsOf(ui.selectedClassId).filter(g=>g.id!==el.dataset.group);
+      persist(); render();
+    }
+  }
+  else if(action==='toggle-group-member'){
+    const gid = el.dataset.group, sid = el.dataset.student;
+    const groups = groupsOf(ui.selectedClassId);
+    const g = groups.find(x=>x.id===gid);
+    if(g){
+      if(g.memberIds.includes(sid)){
+        g.memberIds = g.memberIds.filter(id=>id!==sid);
+      } else {
+        // a student belongs to only one group at a time within a class
+        groups.forEach(other=>{ other.memberIds = other.memberIds.filter(id=>id!==sid); });
+        g.memberIds.push(sid);
+      }
+      persist(); render();
+    }
+  }
+  else if(action==='save-final-grade'){
+    ui.saveMsg='Ο βαθμός αποθηκεύτηκε.';
+    persist();
+    setTimeout(()=>{ ui.saveMsg=''; const m=document.querySelector('.save-msg'); if(m) m.textContent=''; }, 2000);
+  }
+  else if(action==='save-sync-code'){
+    const val = document.getElementById('syncCodeInput').value.trim();
+    if(val){
+      setSyncCode(val);
+      attachSync();
+      pushToFirestore();
+      render();
+    }
+  }
+  else if(action==='do-print'){
+    window.print();
+  }
+  else if(action==='reset-all'){
+    if(confirm('Αυτό θα διαγράψει ΟΛΑ τα δεδομένα (τμήματα, μαθητές, μαθήματα, βαθμούς). Θέλεις σίγουρα να συνεχίσεις;')){
+      state = defaultState();
+      ui = {tab:'classes', selectedClassId:'c1', selectedStudentId:null, editingLessonId:null,
+            draftDate:new Date().toISOString().slice(0,10), draftTopic:'', draftFlags:{}, saveMsg:''};
+      persist(); render();
+    }
+  }
+});
+
+document.addEventListener('change', (e)=>{
+  const el = e.target.closest('[data-action]');
+  if(!el) return;
+  const action = el.dataset.action;
+  if(action==='select-class'){
+    ui.selectedClassId = el.value; ui.selectedStudentId=null;
+    if(ui.tab==='lesson'){ ui.editingLessonId=null; ui.draftTopic=''; ui.draftFlags={}; ui.draftDate=new Date().toISOString().slice(0,10); }
+    render();
+  }
+  else if(action==='select-student'){ ui.selectedStudentId = el.value; render(); }
+  else if(action==='select-print-type'){ ui.printType = el.value; render(); }
+  else if(action==='select-print-student'){ ui.printStudentId = el.value; render(); }
+  else if(action==='set-date'){ ui.draftDate = el.value; }
+  else if(action==='rename-class'){
+    const cls = getClass(ui.selectedClassId);
+    cls.name = el.value.trim() || cls.name;
+    persist(); render();
+  }
+  else if(action==='import-excel'){
+    const file = el.files && el.files[0];
+    if(file) handleExcelImport(file);
+    el.value = '';
+  }
+  else if(action==='import-test-excel'){
+    const file = el.files && el.files[0];
+    if(file) handleTestExcelImport(file);
+    el.value = '';
+  }
+});
+
+document.addEventListener('input', (e)=>{
+  const el = e.target.closest('[data-action]');
+  if(!el) return;
+  const action = el.dataset.action;
+  if(action==='set-topic'){ ui.draftTopic = el.value; }
+  else if(action==='set-date'){ ui.draftDate = el.value; }
+  else if(action==='note-input'){
+    const sid = el.dataset.student;
+    if(!ui.draftFlags[sid]) ui.draftFlags[sid]={};
+    ui.draftFlags[sid].note = el.value;
+  }
+  else if(action==='ys-text'){
+    const cid=ui.selectedClassId, sid=el.dataset.student, field=el.dataset.field;
+    if(!state.yearStart[cid]) state.yearStart[cid]={};
+    if(!state.yearStart[cid][sid]) state.yearStart[cid][sid]={assignmentDone:false, assignmentGrade:'', portfolioDone:false, portfolioGrade:'', coverDone:false, coverGrade:'', notes:''};
+    state.yearStart[cid][sid][field] = el.value;
+    persist();
+  }
+  else if(action==='set-final-grade'){
+    const cid=ui.selectedClassId, sid=ui.selectedStudentId;
+    if(!state.finalGrades[cid]) state.finalGrades[cid]={};
+    if(!state.finalGrades[cid][sid]) state.finalGrades[cid][sid]={grade:'', notes:''};
+    state.finalGrades[cid][sid].grade = el.value;
+  }
+  else if(action==='set-final-notes'){
+    const cid=ui.selectedClassId, sid=ui.selectedStudentId;
+    if(!state.finalGrades[cid]) state.finalGrades[cid]={};
+    if(!state.finalGrades[cid][sid]) state.finalGrades[cid][sid]={grade:'', notes:''};
+    state.finalGrades[cid][sid].notes = el.value;
+  }
+  else if(action==='set-test-title'){ ui.draftTestTitle = el.value; }
+  else if(action==='set-test-date'){ ui.draftTestDate = el.value; }
+  else if(action==='set-test-grade'){ ui.draftTestGrades[el.dataset.student] = el.value; }
+});
+
+function normalizeGreek(str){
+  return String(str||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+}
+
+function handleExcelImport(file){
+  const reader = new FileReader();
+  reader.onload = (evt)=>{
+    try{
+      const data = new Uint8Array(evt.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, {defval:''});
+      if(!rows.length){ ui.importSummary = '⚠️ Το αρχείο φαίνεται άδειο.'; render(); return; }
+
+      const headers = Object.keys(rows[0]);
+      const nameKey = headers.find(h=>{
+        const n = normalizeGreek(h);
+        return n.includes('ονοματεπωνυμο') || n.includes('ονομα') || n.includes('name') || n.includes('μαθητ');
+      });
+      const classKey = headers.find(h=>{
+        const n = normalizeGreek(h);
+        return n.includes('τμημα') || n.includes('ταξη') || n.includes('class') || n.includes('τμ.');
+      });
+
+      if(!nameKey || !classKey){
+        ui.importSummary = '⚠️ Δεν βρέθηκαν στήλες για όνομα και τμήμα. Έλεγξε ότι οι επικεφαλίδες περιέχουν λέξεις όπως «Ονοματεπώνυμο» και «Τμήμα».';
+        render(); return;
+      }
+
+      // group rows by the class label found in the file
+      const groups = {};
+      rows.forEach(r=>{
+        const name = String(r[nameKey]||'').trim();
+        const cls = String(r[classKey]||'').trim();
+        if(!name || !cls) return;
+        if(!groups[cls]) groups[cls] = [];
+        groups[cls].push(name);
+      });
+
+      const usedClassIds = new Set();
+      const summaryLines = [];
+      const leftover = [];
+
+      Object.keys(groups).forEach(label=>{
+        const names = groups[label];
+        // 1) try exact (accent/case-insensitive) match against existing class names
+        let target = state.classes.find(c=> normalizeGreek(c.name)===normalizeGreek(label) && !usedClassIds.has(c.id));
+        // 2) otherwise, claim the next class still at its default "Τμήμα N" name
+        if(!target){
+          target = state.classes.find(c=> /^τμημα \d+$/.test(normalizeGreek(c.name)) && !usedClassIds.has(c.id));
+          if(target) target.name = label;
+        }
+        if(!target){ leftover.push(label+' ('+names.length+' μαθητές)'); return; }
+        usedClassIds.add(target.id);
+
+        let added=0, skipped=0;
+        names.forEach(n=>{
+          const exists = target.students.some(s=> normalizeGreek(s.name)===normalizeGreek(n));
+          if(exists){ skipped++; return; }
+          target.students.push({id:uid('s'), name:n});
+          added++;
+        });
+        summaryLines.push(`«${escapeHtml(target.name)}»: +${added} μαθητές${skipped? ' ('+skipped+' υπήρχαν ήδη)':''}`);
+      });
+
+      if(leftover.length){
+        summaryLines.push(`⚠️ Δεν χώρεσαν (όλα τα τμήματα είναι ήδη σε χρήση): ${leftover.map(escapeHtml).join(', ')}`);
+      }
+
+      ui.importSummary = summaryLines.join('<br>') || 'Δεν βρέθηκαν έγκυρες γραμμές για εισαγωγή.';
+      persist();
+      render();
+    }catch(err){
+      console.error(err);
+      ui.importSummary = '⚠️ Κάτι πήγε στραβά κατά την ανάγνωση του αρχείου. Βεβαιώσου ότι είναι έγκυρο .xlsx.';
+      render();
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function saveLesson(){
+  const cid = ui.selectedClassId;
+  let lessonId = ui.editingLessonId;
+  if(!lessonId){
+    lessonId = uid('l');
+    state.lessons.push({id:lessonId, classId:cid, date:ui.draftDate, topic:ui.draftTopic});
+  } else {
+    const l = state.lessons.find(x=>x.id===lessonId);
+    l.date = ui.draftDate; l.topic = ui.draftTopic; l.classId = cid;
+  }
+  state.attendance[lessonId] = JSON.parse(JSON.stringify(ui.draftFlags));
+  persist();
+  ui.editingLessonId = lessonId;
+  ui.saveMsg = 'Το μάθημα αποθηκεύτηκε.';
+  render();
+  setTimeout(()=>{ ui.saveMsg=''; const m=document.querySelector('.save-msg'); if(m) m.textContent=''; }, 2200);
+}
+
+function saveTest(){
+  const cid = ui.selectedClassId;
+  let testId = ui.editingTestId;
+  if(!testId){
+    testId = uid('t');
+    state.tests.push({id:testId, classId:cid, date:ui.draftTestDate, title:ui.draftTestTitle});
+  } else {
+    const t = state.tests.find(x=>x.id===testId);
+    t.date = ui.draftTestDate; t.title = ui.draftTestTitle; t.classId = cid;
+  }
+  state.testGrades[testId] = Object.assign({}, ui.draftTestGrades);
+  persist();
+  ui.editingTestId = testId;
+  ui.saveMsg = 'Το διαγώνισμα αποθηκεύτηκε.';
+  render();
+  setTimeout(()=>{ ui.saveMsg=''; const m=document.querySelector('.save-msg'); if(m) m.textContent=''; }, 2200);
+}
+
+function handleTestExcelImport(file){
+  const cls = getClass(ui.selectedClassId);
+  const reader = new FileReader();
+  reader.onload = (evt)=>{
+    try{
+      const data = new Uint8Array(evt.target.result);
+      const wb = XLSX.read(data, {type:'array'});
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, {defval:''});
+      if(!rows.length){ ui.testImportSummary = '⚠️ Το αρχείο φαίνεται άδειο.'; render(); return; }
+
+      const headers = Object.keys(rows[0]);
+      const nameKey = headers.find(h=>{
+        const n = normalizeGreek(h);
+        return n.includes('ονοματεπωνυμο') || n.includes('ονομα') || n.includes('name') || n.includes('μαθητ');
+      });
+      const gradeKey = headers.find(h=>{
+        const n = normalizeGreek(h);
+        return n.includes('βαθμο') || n.includes('grade') || n.includes('score');
+      });
+
+      if(!nameKey || !gradeKey){
+        ui.testImportSummary = '⚠️ Δεν βρέθηκαν στήλες για όνομα και βαθμό. Έλεγξε τις επικεφαλίδες.';
+        render(); return;
+      }
+
+      let matched=0, unmatched=[];
+      rows.forEach(r=>{
+        const name = String(r[nameKey]||'').trim();
+        const grade = String(r[gradeKey]||'').trim();
+        if(!name) return;
+        const student = cls.students.find(s=> normalizeGreek(s.name)===normalizeGreek(name));
+        if(student){
+          ui.draftTestGrades[student.id] = grade;
+          matched++;
+        } else {
+          unmatched.push(name);
+        }
+      });
+
+      ui.testImportSummary = `✅ Αντιστοιχίστηκαν ${matched} μαθητές.` +
+        (unmatched.length? `<br>⚠️ Δεν βρέθηκαν στο τμήμα: ${unmatched.map(escapeHtml).join(', ')}` : '');
+      render();
+    }catch(err){
+      console.error(err);
+      ui.testImportSummary = '⚠️ Κάτι πήγε στραβά κατά την ανάγνωση του αρχείου. Βεβαιώσου ότι είναι έγκυρο .xlsx.';
+      render();
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+loadState();
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(e=>console.error('SW registration failed', e));
+  });
+}
+</script>
+</body>
+</html>
